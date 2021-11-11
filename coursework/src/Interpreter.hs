@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Interpreter
 (
     AExp(..),
@@ -12,15 +13,14 @@ import Data.Map
 import Machine
 
 --TODO Task 2.1
-data AExp =N Int|V Vname|Plus Int Vname|Aundefined
+data AExp =N Val|V Vname|Plus AExp AExp|Aundefined
     deriving (Eq, Read, Show)
 
 --TODO Task 2.2
 aval :: AExp -> State -> Val
-
 aval (N x) s=x
-aval (V v) s=V
-aval (Plus a1 a2) s=head([x+aval a1|x<-(aval a2,x)])
+aval (V v) s=head[ head x | (_,_,x) <- [Machine.iexec (LOAD v) (0,s,[])]]
+aval (Plus a1 a2) s= aval a1 s+aval a2 s
 aval Aundefined s = undefined
 
 --TODO Task 2.1
@@ -29,41 +29,23 @@ data BExp =Bc Bool|Not Bool|And Bool Bool|Less AExp AExp|Bundefined
 
 --TODO Task 2.3
 bval :: BExp -> State -> Bool
-
-bval(Bc x) s=x
-
-bval(Not x) s | isNothing x =Nothing
-               | x =False
-               | not x =True
-
-bval(And x y) s | x,y  =True
-                 | Otherwise  =False
-
-bval(Less a1 a2) s | aval a1<head([x | x<-(aval a2,x)]) =True
-                 | Otherwise =False
-bval Bundefined s=undefined
-
+bval (Bc b) s =b
+bval (Not b) s | b =False
+               | not b =True
+bval (And b1 b2) s | b1 && b2==True =True
+                   | otherwise =False
+bval (Less a1 a2) s | aval a1 s<aval a2 s =True
+                   | otherwise =False
+bval Bundefined s =undefined
 --TODO Task 2.1
-data Com =Assign Vname AExp| Seq Instr Instr| If BExp Instr Instr|While BExp Instr|SKIP|Cundefined
+data Com =Assign Vname AExp| Seq Com Com| If BExp Com Com|While BExp Com|SKIP|Cundefined
     deriving (Eq, Read, Show)
 
 --TODO Task 2.4
 eval :: Com -> State -> State
-
-eval (Assign v x) s| isNothing x =s
-                   | isNothing v =s
-                   | Otherwise =[(v,x)]
-
-eval (Seq c1 c2) s | isNothing c1 =s
-                   | isNothing c2 =s
-                   | otherwise   = iexec c1 iexec c2
-
-eval (If b c1 c2) s | b = iexec c1 iexec c2
-                    |otherwise =Nothing
-
-eval (While b c) s | b =iexec c
-                   | otherwise =Nothing
-
-eval SKIP s= Nothing
-
+eval (Assign v x) s =head([x | (_,x,_)<- [Machine.exec [Machine.LOADI (aval x s) ,Machine.STORE v] (0,s,[])]])
+eval (Seq c1 c2) s = eval c2 (eval c1 s)
+eval (If b c1 c2) s= if bval b s then eval c1 s else eval c2 s
+eval (While b c) s= if bval b s then eval c s else eval SKIP s 
+eval SKIP s= s
 eval Cundefined s= undefined
