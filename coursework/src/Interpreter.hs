@@ -33,7 +33,7 @@ bval (Bc b) s =b
 bval (Not b) s | bval b s  =False
                | not (bval b s) =True
 
-bval (And b1 b2) s | (bval b1 s && bval b2 s)==True =True
+bval (And b1 b2) s | (bval b1 s && bval b2 s) =True
                    | otherwise =False
 bval (Less a1 a2) s | aval a1 s<aval a2 s =True
                    | otherwise =False
@@ -47,7 +47,7 @@ eval :: Com -> State -> State
 eval (Assign v x) s =head([x | (_,x,_)<- [Machine.exec [Machine.LOADI (aval x s) ,Machine.STORE v] (0,s,[])]])
 eval (Seq c1 c2) s = eval c2 (eval c1 s)
 eval (If b c1 c2) s= if bval b s then eval c1 s else eval c2 s
-eval (While b c) s| bval b s  = eval (While b c) (eval c s) 
+eval (While b c) s| bval b s  = eval (While b c) (eval c s)
                   | not (bval b s)= s
 eval SKIP s= s
 eval Cundefined s= undefined

@@ -52,4 +52,4 @@ iexec IUndefined (a,b,c) = undefined
 exec :: [Instr] -> Config -> Config
 exec xs (a,b,c) | length xs==1 = iexec (head xs) (a,b,c)
                 | otherwise = exec (tail xs) (iexec (head xs) (a,b,c))
-
+                
